@@ -93,15 +93,15 @@
 
 
 		<el-dialog title="添加账单" :visible.sync="addFormVisible" width="30%" label-width="80px">
-		  <el-form :model="form">
-		    <el-form-item label="日期" >
+		  <el-form :model="form" :rules="rules" ref="form">
+		    <el-form-item label="日期" prop="time">
 			    <el-date-picker
 			      v-model="form.time"
 			      type="date"
 			      placeholder="选择日期">
 			    </el-date-picker>
 		    </el-form-item>
-		    <el-form-item label="分类" >
+		    <el-form-item label="分类" prop="category">
 			  <el-select v-model="form.category" placeholder="请选择分类">
 			    <el-option
 			      v-for="item in category"
@@ -111,10 +111,10 @@
 			    </el-option>
 			  </el-select>
 		    </el-form-item>
-		    <el-form-item label="金额" >
-		      <el-input v-model="form.amount" style="width: 100px"></el-input>
+		    <el-form-item label="金额" prop="amount" >
+		      <el-input v-model="form.amount" v-only-number  style="width: 100px"></el-input>
 		    </el-form-item>
-		    <el-form-item label="类型" >
+		    <el-form-item label="类型" prop="type">
 			  <el-radio v-model="form.type" label="1">收入</el-radio>
 			  <el-radio v-model="form.type" label="0">支出</el-radio>
 		    </el-form-item>
@@ -147,6 +147,20 @@
 	    addFormVisible: false,
 	    form: {
 	    	type: ''
+	    },
+	    rules: {
+	        time: [
+                { required: true, message: '请选择日期', trigger: 'blur' },
+            ],
+            category: [
+                { required: true, message: '请选择类型', trigger: 'blur' },
+            ],
+	        amount: [
+                { required: true, message: '请输入金额', trigger: 'blur' },
+            ],
+            type: [
+                { required: true, message: '请选择类型', trigger: 'blur' },
+            ],
 	    }
 	  },
 	  filters: {
@@ -156,6 +170,29 @@
 		  filterType: function(value) {
 		  	let dataMap = ['支出','收入']
 		  	return dataMap[value]
+		  }
+	  },
+	  directives: {
+		  onlyNumber: {
+		    inserted: function (el) {
+			    el.addEventListener("keypress",function(e){
+			      e = e || window.event;
+			      let charcode = typeof e.charCode == 'number' ? e.charCode : e.keyCode;
+			      let re = /\d/;
+			      if(charcode == 46){
+			        if(el.value && el.value.includes('.')){
+			          e.preventDefault();
+			        }
+			        return;
+			      }else if(!re.test(String.fromCharCode(charcode)) && charcode > 9 && !e.ctrlKey){
+			        if(e.preventDefault){
+			          e.preventDefault();
+			        }else{
+			            e.returnValue = false;
+			        }
+			      }
+			    });
+		    }
 		  }
 	  },
 	  computed: {
@@ -257,9 +294,6 @@
 	  },
 	  methods: {
 	  	add() {
-
-	  	},
-	  	formSubmit() {
            this.tableData.push({
            	 time: new Date(this.form.time).getTime(),
            	 type: this.form.type,
@@ -267,6 +301,17 @@
            	 amount: this.form.amount
            })
            this.addFormVisible = false
+	  	},
+	  	formSubmit() {
+	        this.$refs['form'].validate((valid) => {
+	          if (valid) {
+	            this.add()
+	          } else {
+	            console.log('error submit!!');
+	            return false;
+	          }
+	        });
+
 	  	}
 	  }
 	})
