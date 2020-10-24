@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>xmind work</title>
+	<!-- 引入样式 -->
+	<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style type="text/css">
+    	body {
+    		padding: 0 300px
+    	}
+    </style>
+</head>
+
+<body>
+	<div id="app">
+		<div style="padding: 20px 0">
+		  <el-select v-model="year" placeholder="请选择年份">
+		    <el-option
+		      v-for="item in years"
+		      :key="item"
+		      :label="item"
+		      :value="item">
+		    </el-option>
+		  </el-select>
+		  <el-select v-model="month" placeholder="请选择月份" v-if="year">
+		    <el-option
+		      v-for="item in months"
+		      :key="item"
+		      :label="item"
+		      :value="item">
+		    </el-option>
+		  </el-select>
+		  <el-button type="primary" @click="addFormVisible = true" style="float: right;">添加账单</el-button>
+          
+		</div>
+        <div style="padding: 20px 0;">
+			 <el-select v-model="chooseCategory" placeholder="请选择分类" clearable>
+			    <el-option
+			      v-for="item in category"
+			      :key="item"
+			      :label="item"
+			      :value="item">
+			    </el-option>
+			 </el-select>
+            <span>总收入: {{ balance.income }}</span>
+		    <span>总支出: {{ balance.expenditure }}</span>
+        </div>
+	    <el-table border :data="filterTableData" style="width: 100%">
+	      <el-table-column
+	        label="日期"
+	        width="180">
+		      <template slot-scope="scope">
+		        {{ scope.row.time | filterStamp}}
+		      </template>
+	      </el-table-column>
+	      <el-table-column
+	        prop="category"
+	        label="分类"
+	        width="180">
+		      <template slot-scope="scope">
+		        {{  category[scope.row.category]}}
+		      </template>
+	      </el-table-column>
+	      <el-table-column
+	        prop="amount"
+	        label="金额">
+	      </el-table-column>
+	      <el-table-column
+	        label="分类">
+	          <template slot-scope="scope">
+		        {{ scope.row.type | filterType}}
+		      </template>
+	      </el-table-column>
+	    </el-table>
+        
+        <h2>统计分析</h2>
+        <!-- 统计分析表 -->
+	    <el-table :data="analysisTable" style="width: 100%" border>
+	      <el-table-column
+	        label="分类">
+		      <template slot-scope="scope">
+		        {{  category[scope.row[0]]}}
+		      </template>
+	      </el-table-column>
+	      <el-table-column
+	        label="金额">		      
+	        <template slot-scope="scope">
+		        {{  scope.row[1]}}
+		    </template>
+	      </el-table-column>
+
+	    </el-table>
+
+
+		<el-dialog title="添加账单" :visible.sync="addFormVisible" width="30%" label-width="80px">
+		  <el-form :model="form">
+		    <el-form-item label="日期" >
+			    <el-date-picker
+			      v-model="form.time"
+			      type="date"
+			      placeholder="选择日期">
+			    </el-date-picker>
+		    </el-form-item>
+		    <el-form-item label="分类" >
+			  <el-select v-model="form.category" placeholder="请选择分类">
+			    <el-option
+			      v-for="item in category"
+			      :key="item"
+			      :label="item"
+			      :value="item">
+			    </el-option>
+			  </el-select>
+		    </el-form-item>
+		    <el-form-item label="金额" >
+		      <el-input v-model="form.amount" style="width: 100px"></el-input>
+		    </el-form-item>
+		    <el-form-item label="类型" >
+			  <el-radio v-model="form.type" label="1">收入</el-radio>
+			  <el-radio v-model="form.type" label="0">支出</el-radio>
+		    </el-form-item>
+		  </el-form>
+		  <div slot="footer" class="dialog-footer">
+		    <el-button @click="addFormVisible = false">取 消</el-button>
+		    <el-button type="primary" @click="formSubmit">确 定</el-button>
+		  </div>
+		</el-dialog>
+
+	</div>
+</body>
+<!-- 开发环境版本，包含了有帮助的命令行警告 -->
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<!-- 引入组件库 -->
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script type="text/javascript">
+	var app = new Vue({
+	  el: '#app',
+	  data: {
+	    message: 'Hello Vue!',
+	    tableData: [],
+	    category: {},       // 分类id->名字
+	    categoryByName: {}, // 分类名字->id
+	    chooseCategory: '', // 被选中的分类
+	    value: '',
+	    year: '',
+	    month: '',
+	    date: '',
+	    addFormVisible: false,
+	    form: {
+	    	type: ''
+	    }
+	  },
+	  filters: {
+		  filterStamp: function (value) {
+		    return new Date( parseInt(value)).toLocaleDateString()
+		  },
+		  filterType: function(value) {
+		  	let dataMap = ['支出','收入']
+		  	return dataMap[value]
+		  }
+	  },
+	  computed: {
+	  	analysisTable() {
+	  		let m = new Map()
+	        this.filterTableData.map( item => {
+	        	if (m.get(item.category)) {
+	        		let amount = m.get(item.category) + parseInt(item.amount)
+                    m.set(item.category, amount)
+	        	} else {
+	        		m.set(item.category, parseInt(item.amount))
+	        	}
+	        })
+	        return Array.from(m).sort((a,b) => {
+	        	return a[1] - b[1]
+	        })
+	  	},
+	  	balance() {
+	  		let income = 0;
+	  		let expenditure = 0
+	        this.filterTableData.map( item => {
+	        	if (item.type == '1') {
+                  income = income + parseInt(item.amount)
+	        	} else {
+	        	  expenditure = expenditure + parseInt(item.amount)
+	        	}
+	        })
+	        return {
+	        	income: income,
+	        	expenditure: expenditure
+	        }
+	  	},
+	  	expenditure() {
+	         return this.filterTableData.reduce((prev, cur) => {
+                return prev + parseInt(cur.amount);
+	         }, 0)
+	  	},
+	  	filterTableData() {
+          if (!this.year || !this.month) {
+          	return this.tableData.filter(item => {
+          		if (this.chooseCategory) {
+                    return item.category == this.categoryByName[this.chooseCategory]
+          		} else {
+          			return true
+          		}
+          	})
+          } else {
+	         return this.tableData.filter(item => {
+	            let date = new Date( parseInt(item.time)).toLocaleDateString().split('/')
+	            if (date[0] == this.year && date[1] == this.month) {
+	          		if (this.chooseCategory) {
+	                    return item.category == this.categoryByName[this.chooseCategory]
+	          		} else {
+	          			return true
+	          		}
+	            }
+	         })
+          }
+	  	},
+	  	// 月份要根据年份变动
+	  	months() {
+          if (!this.year) {
+          	return []
+          }
+
+	  	  let s = new Set();
+          this.tableData.map(item => {
+            let date = new Date( parseInt(item.time)).toLocaleDateString()
+            if (date.split('/')[0] == this.year) {
+            	s.add(date.split('/')[1])
+            }
+          })
+          return Array.from(s)
+	  	},
+	  	years() {
+	  	  let s = new Set();
+          this.tableData.map(item => {
+            let date = new Date( parseInt(item.time)).toLocaleDateString()
+            s.add(date.split('/')[0])
+          })
+          return Array.from(s)
+	  	}
+	  },
+	  created() {
+		fetch('http://localhost:3001/getData')
+		  .then(function(response) {
+		    return response.json()
+		  }).then((json) => {
+		    console.log(json)
+            this.tableData = json.data[1]
+            json.data[0].map(item => {
+            	this.category[item.id] = item.name
+            	this.categoryByName[item.name] = item.id
+            })
+            
+		  }).catch(function(ex) {
+		    console.log('parsing failed', ex)
+		  })
+	  },
+	  methods: {
+	  	add() {
+
+	  	},
+	  	formSubmit() {
+           this.tableData.push({
+           	 time: new Date(this.form.time).getTime(),
+           	 type: this.form.type,
+           	 category: this.categoryByName[this.form.category],
+           	 amount: this.form.amount
+           })
+           this.addFormVisible = false
+	  	}
+	  }
+	})
+</script>
+</html>
